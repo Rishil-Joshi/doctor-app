@@ -3,29 +3,35 @@ import Link from 'next/link';
 interface AuthHeaderProps {
   title: string;
   subtitle?: string;
-  switchText: string;
-  switchLink: string;
-  switchLinkText: string;
+  switchText?: string;
+  switchLink?: string;
+  switchLinkText?: string;
+}
+
+export function AuthBranding() {
+  return (
+    <div className="mb-8 text-center">
+      <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-teal-200 flex items-center justify-center shadow-sm">
+        <span className="text-4xl font-black text-white">🩺</span>
+      </div>
+      <h1 className="text-4xl font-black uppercase tracking-[0.2em] text-slate-900">SURGIFLOW</h1>
+      <p className="text-xs uppercase tracking-[0.35em] font-semibold text-slate-500">
+        CLINICAL PATIENT MANAGEMENT
+      </p>
+    </div>
+  );
 }
 
 export function AuthHeader({ title, subtitle, switchText, switchLink, switchLinkText }: AuthHeaderProps) {
   return (
     <div>
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 h-16 w-16 rounded-xl bg-teal-200 flex items-center justify-center">
-          <span className="text-3xl font-bold text-white">🩺</span>
-        </div>
-        <h1 className="text-3xl font-extrabold text-slate-900">SURGIFLOW</h1>
-        <p className="text-sm font-medium text-slate-500">Clinical Patient Management</p>
-      </div>
+      <h2 className="text-3xl font-black uppercase tracking-tight text-slate-800 mb-2">{title}</h2>
+      {subtitle && <p className="text-sm font-medium text-slate-500 mb-5">{subtitle}</p>}
 
-      <h2 className="text-2xl font-bold text-slate-800 mb-4">{title}</h2>
-      {subtitle && <p className="text-sm text-slate-600 mb-6">{subtitle}</p>}
-
-      {switchText && (
-        <p className="text-center text-sm font-medium text-slate-600 mb-6">
-          {switchText}
-          <Link href={switchLink} className="text-teal-500 underline ml-1">
+      {switchText && switchLink && switchLinkText && (
+        <p className="text-center text-xs uppercase tracking-[0.28em] text-slate-500">
+          {switchText}{' '}
+          <Link href={switchLink} className="text-teal-500 underline font-semibold ml-1">
             {switchLinkText}
           </Link>
         </p>

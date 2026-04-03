@@ -15,7 +15,7 @@ import {
 import { ValidationErrors, RegisterFormData } from '@/lib/types';
 import { ERROR_MESSAGES } from '@/lib/constants';
 import { FormField } from '@/components/FormField';
-import { AuthHeader } from '@/components/AuthHeader';
+import { AuthBranding, AuthHeader } from '@/components/AuthHeader';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -77,15 +77,17 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 max-h-screen overflow-y-auto">
-        <AuthHeader
-          title="Create Account"
-          subtitle="Join SURGIFLOW to manage your patients"
-          switchText="Already have an account?"
-          switchLink="/login"
-          switchLinkText="Login here"
-        />
+    <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <AuthBranding />
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-h-screen overflow-y-auto">
+          <AuthHeader
+            title="Create Account"
+            subtitle="Join SURGIFLOW to manage your patients"
+            switchText="Already have an account?"
+            switchLink="/login"
+            switchLinkText="Login here"
+          />
 
         <form onSubmit={handleRegister} className="space-y-4">
           <FormField
@@ -183,6 +185,7 @@ export default function RegisterPage() {
           </button>
         </form>
       </div>
-    </main>
+    </div>
+  </main>
   );
 }
