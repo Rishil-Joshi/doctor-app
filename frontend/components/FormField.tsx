@@ -21,12 +21,12 @@ export function FormField({
 }: FormFieldProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-600 mb-1">{label}</label>
+      <label className="block text-[0.7rem] uppercase tracking-[0.25em] font-semibold text-slate-500 mb-2">{label}</label>
       <input
         type={type}
         value={value}
         onChange={onChange}
-        className={`w-full rounded-xl border p-3 text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-200 ${
+        className={`w-full rounded-2xl border bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition disabled:cursor-not-allowed focus:border-teal-400 focus:ring-2 focus:ring-teal-200 ${
           error ? 'border-red-500' : 'border-slate-200'
         }`}
         placeholder={placeholder}
