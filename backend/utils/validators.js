@@ -15,10 +15,7 @@ const validateEmail = (email) => {
  * @returns {boolean}
  */
 const validatePassword = (password) => {
-  if (password.length < 8) return false;
-  if (!/[A-Z]/.test(password)) return false;
-  if (!/[0-9]/.test(password)) return false;
-  return true;
+  return password && password.length >= 5;
 };
 
 /**
@@ -28,8 +25,8 @@ const validatePassword = (password) => {
  * @returns {boolean}
  */
 const validatePhone = (phone) => {
-  const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s]?[0-9]{3}[-\s]?[0-9]{4,6}$/;
-  return phoneRegex.test(phone.replace(/\s/g, ''));
+  const digitsOnly = phone.replace(/\D/g, '');
+  return /^[0-9]{10}$/.test(digitsOnly);
 };
 
 /**

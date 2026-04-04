@@ -18,30 +18,20 @@ const { AppError, ERROR_MESSAGES } = require('../utils/errors');
 const registerUser = async (userData) => {
   const { username, email, password, confirmPassword, firstName, lastName, phone, specialization, clinicName } = userData;
 
-  // Validate required fields
-  if (!validateUsername(username) || !validateEmail(email) || !validatePassword(password) || 
+  // Validate required fields (email is optional)
+  if (!validateUsername(username) || !validatePassword(password) ||
       !validateFirstName(firstName) || !validateLastName(lastName) || !validatePhone(phone)) {
     throw new AppError(ERROR_MESSAGES.MISSING_REQUIREMENT, 400);
   }
 
-  // Validate email format
-  if (!validateEmail(email)) {
+  // Validate email format only if provided
+  if (email && !validateEmail(email)) {
     throw new AppError(ERROR_MESSAGES.INVALID_EMAIL, 400);
-  }
-
-  // Validate password strength
-  if (!validatePassword(password)) {
-    throw new AppError(ERROR_MESSAGES.WEAK_PASSWORD, 400);
   }
 
   // Validate passwords match
   if (password !== confirmPassword) {
     throw new AppError(ERROR_MESSAGES.PASSWORDS_MISMATCH, 400);
-  }
-
-  // Validate phone format
-  if (!validatePhone(phone)) {
-    throw new AppError(ERROR_MESSAGES.INVALID_PHONE, 400);
   }
 
   // Check if username exists
@@ -50,14 +40,19 @@ const registerUser = async (userData) => {
     throw new AppError(ERROR_MESSAGES.USERNAME_EXISTS, 400);
   }
 
-  // Check if email exists
-  const existingEmail = await User.findByEmail(email);
-  if (existingEmail) {
-    throw new AppError(ERROR_MESSAGES.EMAIL_EXISTS, 400);
+  // Check if email exists only if provided
+  if (email) {
+    const existingEmail = await User.findByEmail(email);
+    if (existingEmail) {
+      throw new AppError(ERROR_MESSAGES.EMAIL_EXISTS, 400);
+    }
   }
 
+  // Pass null when email is empty to avoid UNIQUE constraint issues
+  const emailValue = email && email.trim() ? email.trim() : null;
+
   // Create user
-  const user = await User.create(username, email, password, firstName, lastName, phone, specialization, clinicName);
+  const user = await User.create(username, emailValue, password, firstName, lastName, phone, specialization, clinicName);
   const token = generateToken(user.id);
 
   return { user, token };

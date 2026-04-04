@@ -1,110 +1,100 @@
 const bcrypt = require('bcryptjs');
-const { db } = require('../config/database');
+const { pool } = require('../config/database');
 
 class User {
   static async create(username, email, password, firstName, lastName, phone = '', specialization = '', clinicName = '') {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        db.run(
-          'INSERT INTO users (username, email, password, first_name, last_name, phone, specialization, clinic_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [username, email, hashedPassword, firstName, lastName, phone, specialization, clinicName],
-          function(err) {
-            if (err) reject(new Error('Error creating user: ' + err.message));
-            else User.findById(this.lastID).then(resolve).catch(reject);
-          }
-        );
-      } catch (err) {
-        reject(new Error('Error creating user: ' + err.message));
-      }
-    });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      `INSERT INTO users (username, email, password, first_name, last_name, phone, specialization, clinic_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [username, email, hashedPassword, firstName, lastName, phone, specialization, clinicName]
+    );
+    return User.findById(result.rows[0].id);
   }
 
   static async findByUsername(username) {
-    return new Promise((resolve, reject) => {
-      db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
-        if (err) reject(new Error('Error finding user: ' + err.message));
-        else resolve(row);
-      });
-    });
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    return result.rows[0] || null;
   }
 
   static async findByEmail(email) {
-    return new Promise((resolve, reject) => {
-      db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
-        if (err) reject(new Error('Error finding user: ' + err.message));
-        else resolve(row);
-      });
-    });
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    return result.rows[0] || null;
   }
 
   static async findById(id) {
-    return new Promise((resolve, reject) => {
-      db.get('SELECT id, username, email, phone, first_name, last_name, specialization, clinic_name, created_at FROM users WHERE id = ?', [id], (err, row) => {
-        if (err) reject(new Error('Error finding user: ' + err.message));
-        else resolve(row);
-      });
-    });
+    const result = await pool.query(
+      'SELECT id, username, email, phone, first_name, last_name, specialization, clinic_name, created_at FROM users WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || null;
   }
 
   static async verifyPassword(plainPassword, hashedPassword) {
-    return await bcrypt.compare(plainPassword, hashedPassword);
+    return bcrypt.compare(plainPassword, hashedPassword);
+  }
+
+  // Proxy methods used by patientService
+  static async createPatient(doctorId, name, email, phone, age, gender, details, medicalHistory) {
+    return Patient.create(doctorId, name, email, phone, age, gender, details, medicalHistory);
+  }
+
+  static async getPatientsByDoctorId(doctorId) {
+    return Patient.findByDoctorId(doctorId);
+  }
+
+  static async getPatientById(id) {
+    return Patient.findByIdOnly(id);
+  }
+
+  static async updatePatient(id, doctorId, data) {
+    return Patient.update(id, doctorId, data);
+  }
+
+  static async deletePatient(id, doctorId) {
+    return Patient.delete(id, doctorId);
   }
 }
 
 class Patient {
   static async create(doctorId, name, email, phone, age, gender, details, medicalHistory) {
-    return new Promise((resolve, reject) => {
-      db.run(
-        'INSERT INTO patients (doctor_id, name, email, phone, age, gender, details, medical_history) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [doctorId, name, email, phone, age, gender, details, medicalHistory],
-        function(err) {
-          if (err) reject(new Error('Error creating patient: ' + err.message));
-          else Patient.findById(this.lastID, doctorId).then(resolve).catch(reject);
-        }
-      );
-    });
+    const result = await pool.query(
+      `INSERT INTO patients (doctor_id, name, email, phone, age, gender, details, medical_history)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [doctorId, name, email, phone, age, gender, details, medicalHistory]
+    );
+    return Patient.findByIdOnly(result.rows[0].id);
   }
 
   static async findByDoctorId(doctorId) {
-    return new Promise((resolve, reject) => {
-      db.all('SELECT * FROM patients WHERE doctor_id = ? ORDER BY created_at DESC', [doctorId], (err, rows) => {
-        if (err) reject(new Error('Error finding patients: ' + err.message));
-        else resolve(rows || []);
-      });
-    });
+    const result = await pool.query(
+      'SELECT * FROM patients WHERE doctor_id = $1 ORDER BY created_at DESC',
+      [doctorId]
+    );
+    return result.rows;
   }
 
-  static async findById(id, doctorId) {
-    return new Promise((resolve, reject) => {
-      db.get('SELECT * FROM patients WHERE id = ? AND doctor_id = ?', [id, doctorId], (err, row) => {
-        if (err) reject(new Error('Error finding patient: ' + err.message));
-        else resolve(row);
-      });
-    });
+  static async findByIdOnly(id) {
+    const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
+    return result.rows[0] || null;
   }
 
   static async update(id, doctorId, data) {
-    return new Promise((resolve, reject) => {
-      const { name, email, phone, age, gender, details, medicalHistory } = data;
-      db.run(
-        'UPDATE patients SET name = ?, email = ?, phone = ?, age = ?, gender = ?, details = ?, medical_history = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND doctor_id = ?',
-        [name, email, phone, age, gender, details, medicalHistory, id, doctorId],
-        function(err) {
-          if (err) reject(new Error('Error updating patient: ' + err.message));
-          else Patient.findById(id, doctorId).then(resolve).catch(reject);
-        }
-      );
-    });
+    const { name, email, phone, age, gender, details, medicalHistory } = data;
+    await pool.query(
+      `UPDATE patients SET name=$1, email=$2, phone=$3, age=$4, gender=$5, details=$6,
+       medical_history=$7, updated_at=CURRENT_TIMESTAMP WHERE id=$8 AND doctor_id=$9`,
+      [name, email, phone, age, gender, details, medicalHistory, id, doctorId]
+    );
+    return Patient.findByIdOnly(id);
   }
 
   static async delete(id, doctorId) {
-    return new Promise((resolve, reject) => {
-      db.run('DELETE FROM patients WHERE id = ? AND doctor_id = ?', [id, doctorId], function(err) {
-        if (err) reject(new Error('Error deleting patient: ' + err.message));
-        else resolve(this.changes > 0 ? { id } : null);
-      });
-    });
+    const result = await pool.query(
+      'DELETE FROM patients WHERE id = $1 AND doctor_id = $2',
+      [id, doctorId]
+    );
+    return result.rowCount > 0 ? { id } : null;
   }
 }
 

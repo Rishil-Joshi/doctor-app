@@ -7,13 +7,13 @@ export const USER_DATA_KEY = 'user';
 
 // Validation Rules
 export const VALIDATION_RULES = {
-  PASSWORD_MIN_LENGTH: 8,
+  PASSWORD_MIN_LENGTH: 5,
   USERNAME_MIN_LENGTH: 3,
   FIRST_NAME_MIN_LENGTH: 2,
   LAST_NAME_MIN_LENGTH: 2,
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   PASSWORD_REGEX: /^(?=.*[A-Z])(?=.*[0-9])/,
-  PHONE_REGEX: /^[+]?[(]?[0-9]{3}[)]?[-\s]?[0-9]{3}[-\s]?[0-9]{4,6}$/,
+  PHONE_REGEX: /^[0-9]{10}$/,
 };
 
 // Error Messages
@@ -24,7 +24,7 @@ export const ERROR_MESSAGES = {
   EMAIL_REQUIRED: 'Email is required',
   EMAIL_INVALID: 'Invalid email format',
   PASSWORD_REQUIRED: 'Password is required',
-  PASSWORD_TOO_SHORT: 'Password must be at least 8 characters',
+  PASSWORD_TOO_SHORT: 'Password must be at least 5 characters',
   PASSWORD_NO_UPPERCASE: 'Password must contain at least one uppercase letter',
   PASSWORD_NO_NUMBER: 'Password must contain at least one number',
   PASSWORD_MISMATCH: 'Passwords do not match',
