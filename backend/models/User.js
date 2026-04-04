@@ -50,6 +50,26 @@ class User {
   static async verifyPassword(plainPassword, hashedPassword) {
     return await bcrypt.compare(plainPassword, hashedPassword);
   }
+
+  static async createPatient(doctorId, name, email, phone, age, gender, details, medicalHistory) {
+    return Patient.create(doctorId, name, email, phone, age, gender, details, medicalHistory);
+  }
+
+  static async getPatientsByDoctorId(doctorId) {
+    return Patient.findByDoctorId(doctorId);
+  }
+
+  static async getPatientById(id) {
+    return Patient.findById(id);
+  }
+
+  static async updatePatient(id, data) {
+    return Patient.update(id, data);
+  }
+
+  static async deletePatient(id) {
+    return Patient.delete(id);
+  }
 }
 
 class Patient {
@@ -75,32 +95,32 @@ class Patient {
     });
   }
 
-  static async findById(id, doctorId) {
+  static async findById(id) {
     return new Promise((resolve, reject) => {
-      db.get('SELECT * FROM patients WHERE id = ? AND doctor_id = ?', [id, doctorId], (err, row) => {
+      db.get('SELECT * FROM patients WHERE id = ?', [id], (err, row) => {
         if (err) reject(new Error('Error finding patient: ' + err.message));
         else resolve(row);
       });
     });
   }
 
-  static async update(id, doctorId, data) {
+  static async update(id, data) {
     return new Promise((resolve, reject) => {
       const { name, email, phone, age, gender, details, medicalHistory } = data;
       db.run(
-        'UPDATE patients SET name = ?, email = ?, phone = ?, age = ?, gender = ?, details = ?, medical_history = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND doctor_id = ?',
-        [name, email, phone, age, gender, details, medicalHistory, id, doctorId],
+        'UPDATE patients SET name = ?, email = ?, phone = ?, age = ?, gender = ?, details = ?, medical_history = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [name, email, phone, age, gender, details, medicalHistory, id],
         function(err) {
           if (err) reject(new Error('Error updating patient: ' + err.message));
-          else Patient.findById(id, doctorId).then(resolve).catch(reject);
+          else Patient.findById(id).then(resolve).catch(reject);
         }
       );
     });
   }
 
-  static async delete(id, doctorId) {
+  static async delete(id) {
     return new Promise((resolve, reject) => {
-      db.run('DELETE FROM patients WHERE id = ? AND doctor_id = ?', [id, doctorId], function(err) {
+      db.run('DELETE FROM patients WHERE id = ?', [id], function(err) {
         if (err) reject(new Error('Error deleting patient: ' + err.message));
         else resolve(this.changes > 0 ? { id } : null);
       });
