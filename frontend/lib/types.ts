@@ -1,9 +1,29 @@
 export interface Patient {
   id: number;
   name: string;
-  details: string;
-  photos: string[];
-  videos: string[];
+  email?: string;
+  phone?: string;
+  age?: number;
+  gender?: string;
+  details?: string;
+  medical_history?: string;
+  address?: string;
+  date_of_admission?: string;
+  hospital_name?: string;
+  referred_by?: string;
+  payment_type?: string;
+  cash_amount?: number;
+  on_examination?: string;
+  brief_history?: string;
+  diagnosis?: string;
+  surgery?: string;
+  operation_notes?: string;
+  ao_classification?: string;
+  doctor_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  photos?: string[];
+  videos?: string[];
 }
 
 export interface User {
