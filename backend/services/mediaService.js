@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { pool } = require('../config/database');
 
-const isDev = process.env.NODE_ENV !== 'production';
+const isDev = process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
 
 // ─── LOCAL STORAGE (dev) ──────────────────────────────────────────────────────
 
