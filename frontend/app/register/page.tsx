@@ -3,61 +3,30 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  validateEmail,
-  validatePassword,
-  validatePhone,
-  validateFirstName,
-  validateLastName,
-  validateUsername,
-  validateConfirmPassword,
-} from '@/lib/validations';
-import { ValidationErrors, RegisterFormData } from '@/lib/types';
+import { validateUsername, validatePassword } from '@/lib/validations';
+import { ValidationErrors } from '@/lib/types';
 import { ERROR_MESSAGES } from '@/lib/constants';
-import { FormField } from '@/components/FormField';
-import { AuthBranding, AuthHeader } from '@/components/AuthHeader';
+import { AuthBranding } from '@/components/AuthHeader';
 
 export default function RegisterPage() {
   const router = useRouter();
   const auth = useAuth();
-  const [formData, setFormData] = useState<RegisterFormData>({
+  const [formData, setFormData] = useState({
     username: '',
-    firstName: '',
-    lastName: '',
-    email: '',
     password: '',
-    confirmPassword: '',
-    phone: '',
-    specialization: '',
-    clinicName: '',
+    role: 'surgeon',
   });
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [apiError, setApiError] = useState('');
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
-
-    const firstNameValidation = validateFirstName(formData.firstName);
-    if (!firstNameValidation.isValid) errors.firstName = firstNameValidation.error || '';
-
-    const lastNameValidation = validateLastName(formData.lastName);
-    if (!lastNameValidation.isValid) errors.lastName = lastNameValidation.error || '';
-
     const usernameValidation = validateUsername(formData.username);
     if (!usernameValidation.isValid) errors.username = usernameValidation.error || '';
-
-    const emailValidation = validateEmail(formData.email);
-    if (!emailValidation.isValid) errors.email = emailValidation.error || '';
-
     const passwordValidation = validatePassword(formData.password);
     if (!passwordValidation.isValid) errors.password = passwordValidation.error || '';
-
-    const confirmPasswordValidation = validateConfirmPassword(formData.password, formData.confirmPassword);
-    if (!confirmPasswordValidation.isValid) errors.confirmPassword = confirmPasswordValidation.error || '';
-
-    const phoneValidation = validatePhone(formData.phone);
-    if (!phoneValidation.isValid) errors.phone = phoneValidation.error || '';
-
+    if (!legalAccepted) errors.legal = 'You must accept the legal disclaimer to continue';
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -65,11 +34,18 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setApiError('');
-
     if (!validateForm()) return;
-
     try {
-      await auth.register(formData);
+      await auth.register({
+        username: formData.username,
+        password: formData.password,
+        confirmPassword: formData.password,
+        role: formData.role,
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+      });
       router.push('/dashboard');
     } catch (err) {
       setApiError(err instanceof Error ? err.message : ERROR_MESSAGES.GENERAL_ERROR);
@@ -77,122 +53,117 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+    <main className="min-h-screen flex items-center justify-center p-5 bg-pastel-bg">
       <div className="w-full max-w-md">
         <AuthBranding />
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-h-screen overflow-y-auto">
-          <AuthHeader
-            title="Create Account"
-            subtitle="Join SURGIFLOW to manage your patients"
-          />
 
-        <form onSubmit={handleRegister} className="space-y-4">
-          <FormField
-            label="First Name *"
-            type="text"
-            value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            placeholder="Enter your first name"
-            error={validationErrors.firstName}
-          />
+        <div className="border border-pastel-blue/20 bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
+          <h2 className="text-base font-bold mb-6 text-gray-800 uppercase tracking-widest">CREATE ACCOUNT</h2>
 
-          <FormField
-            label="Last Name *"
-            type="text"
-            value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            placeholder="Enter your last name"
-            error={validationErrors.lastName}
-          />
-
-          <FormField
-            label="Username *"
-            type="text"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            placeholder="Choose a unique username"
-            error={validationErrors.username}
-          />
-
-          <FormField
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="Enter your email (optional)"
-            error={validationErrors.email}
-          />
-
-          <FormField
-            label="Phone Number *"
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => {
-              const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-              setFormData({ ...formData, phone: digits });
-            }}
-            placeholder="10-digit number"
-            error={validationErrors.phone}
-          />
-
-          <FormField
-            label="Password *"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            placeholder="Create a strong password"
-            error={validationErrors.password}
-            helperText={!validationErrors.password ? 'Minimum 5 characters' : undefined}
-          />
-
-          <FormField
-            label="Confirm Password *"
-            type="password"
-            value={formData.confirmPassword}
-            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-            placeholder="Confirm your password"
-            error={validationErrors.confirmPassword}
-          />
-
-          <FormField
-            label="Specialization"
-            type="text"
-            value={formData.specialization || ''}
-            onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-            placeholder="e.g., Cardiology"
-          />
-
-          <FormField
-            label="Clinic Name"
-            type="text"
-            value={formData.clinicName || ''}
-            onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
-            placeholder="Your clinic name"
-          />
-
-          {apiError && (
-            <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
-              {apiError}
+          <form className="space-y-4" onSubmit={handleRegister}>
+            {/* Username */}
+            <div>
+              <label htmlFor="username" className="text-xs font-bold text-gray-600 uppercase tracking-widest">USERNAME</label>
+              <input
+                id="username"
+                type="text"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                placeholder="Enter your username"
+                required
+                className="flex w-full border bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-pastel-mint-dark md:text-sm mt-2 h-12 rounded-xl border-pastel-blue/30"
+              />
+              {validationErrors.username && <p className="mt-1 text-xs text-red-500">{validationErrors.username}</p>}
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={auth.isLoading}
-            className="w-full rounded-xl bg-teal-400 px-4 py-3 text-center text-sm font-bold text-white shadow-md hover:bg-teal-500 disabled:bg-gray-400 transition"
-          >
-            {auth.isLoading ? 'Creating account...' : 'REGISTER'}
-          </button>
-        </form>
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="text-xs font-bold text-gray-600 uppercase tracking-widest">PASSWORD</label>
+              <input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Enter your password"
+                required
+                className="flex w-full border bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-pastel-mint-dark md:text-sm mt-2 h-12 rounded-xl border-pastel-blue/30"
+              />
+              {validationErrors.password && <p className="mt-1 text-xs text-red-500">{validationErrors.password}</p>}
+            </div>
 
-        <p className="mt-4 text-center text-xs uppercase tracking-[0.28em] text-slate-500">
-          Already have an account?{' '}
-          <a href="/login" className="text-teal-500 underline font-semibold ml-1">
-            Login here
-          </a>
-        </p>
+            {/* Role */}
+            <div>
+              <label className="text-xs font-bold text-gray-600 uppercase tracking-widest">ROLE</label>
+              <div className="mt-2 flex flex-col gap-2">
+                {['surgeon', 'manager'].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: r })}
+                    className={`w-full rounded-xl border px-4 py-3 text-sm font-bold uppercase tracking-widest text-left transition ${
+                      formData.role === r
+                        ? 'border-pastel-mint-dark bg-pastel-mint-dark text-white'
+                        : 'border-pastel-blue/30 bg-white text-gray-600'
+                    }`}
+                  >
+                    {r.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Legal Disclaimer */}
+            <div className="p-4 bg-pastel-yellow/40 border border-pastel-peach/40 rounded-xl space-y-3">
+              <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">LEGAL DISCLAIMER</p>
+              <div className="text-xs text-gray-600 space-y-2 max-h-32 overflow-y-auto leading-relaxed">
+                <p className="font-bold uppercase text-xs tracking-wide">DATA PROTECTION &amp; PRIVACY:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Patient data stored securely per IT Act, 2000 and DISHA guidelines</li>
+                  <li>Medical records protected under IMC Regulations, 2002</li>
+                  <li>Unauthorized access is a punishable offense</li>
+                </ul>
+                <p className="mt-2 font-bold uppercase text-xs tracking-wide">YOUR RESPONSIBILITIES:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Maintain confidentiality of patient records</li>
+                  <li>Ensure secure handling of login credentials</li>
+                  <li>Use patient data only for legitimate medical purposes</li>
+                </ul>
+              </div>
+              <div className="flex items-start gap-3 pt-2">
+                <input
+                  id="disclaimer"
+                  type="checkbox"
+                  checked={legalAccepted}
+                  onChange={(e) => setLegalAccepted(e.target.checked)}
+                  className="mt-1 w-5 h-5 rounded"
+                />
+                <label htmlFor="disclaimer" className="text-xs text-gray-600 cursor-pointer leading-relaxed">
+                  I acknowledge the legal obligations regarding patient data protection as per Indian law.
+                </label>
+              </div>
+              {validationErrors.legal && <p className="text-xs text-red-500">{validationErrors.legal}</p>}
+            </div>
+
+            {apiError && (
+              <div className="text-red-500 text-sm bg-red-50 p-3 rounded">{apiError}</div>
+            )}
+
+            <button
+              type="submit"
+              disabled={auth.isLoading}
+              className="w-full bg-pastel-mint-dark hover:opacity-90 text-white h-14 font-bold text-sm uppercase tracking-widest rounded-xl shadow transition disabled:opacity-50"
+            >
+              {auth.isLoading ? 'Creating account...' : 'REGISTER'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <a href="/login" className="text-xs text-pastel-mint-dark hover:opacity-80 font-bold uppercase tracking-widest">
+              ALREADY HAVE AN ACCOUNT? LOGIN
+            </a>
+          </div>
+        </div>
       </div>
-    </div>
-  </main>
+    </main>
   );
 }

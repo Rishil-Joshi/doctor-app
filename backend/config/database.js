@@ -12,11 +12,12 @@ const initializeDatabase = async () => {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE,
         password TEXT NOT NULL,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        phone TEXT NOT NULL,
+        first_name TEXT,
+        last_name TEXT,
+        phone TEXT,
+        role TEXT,
         specialization TEXT,
         clinic_name TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -40,10 +41,12 @@ const initializeDatabase = async () => {
       );
     `);
 
-    // Make email nullable if it isn't already (migration for existing DBs)
-    await client.query(`
-      ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
-    `).catch(() => {});
+    // Migrations for existing DBs
+    await client.query(`ALTER TABLE users ALTER COLUMN email DROP NOT NULL;`).catch(() => {});
+    await client.query(`ALTER TABLE users ALTER COLUMN first_name DROP NOT NULL;`).catch(() => {});
+    await client.query(`ALTER TABLE users ALTER COLUMN last_name DROP NOT NULL;`).catch(() => {});
+    await client.query(`ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;`).catch(() => {});
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT;`).catch(() => {});
 
     console.log('PostgreSQL database initialized');
   } finally {

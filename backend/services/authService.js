@@ -16,23 +16,18 @@ const { AppError, ERROR_MESSAGES } = require('../utils/errors');
  * @returns {object} { user, token }
  */
 const registerUser = async (userData) => {
-  const { username, email, password, confirmPassword, firstName, lastName, phone, specialization, clinicName } = userData;
+  const { username, email, password, confirmPassword, firstName, lastName, phone, specialization, clinicName, role } = userData;
 
-  // Validate required fields (email is optional)
-  if (!validateUsername(username) || !validatePassword(password) ||
-      !validateFirstName(firstName) || !validateLastName(lastName) || !validatePhone(phone)) {
-    throw new AppError(ERROR_MESSAGES.MISSING_REQUIREMENT, 400);
-  }
+  // Validate each required field with a specific error
+  if (!validateUsername(username)) throw new AppError(ERROR_MESSAGES.USERNAME_REQUIRED, 400);
+  if (!validatePassword(password)) throw new AppError(ERROR_MESSAGES.PASSWORD_REQUIRED, 400);
+  if (password.length < 5) throw new AppError(ERROR_MESSAGES.WEAK_PASSWORD, 400);
 
   // Validate email format only if provided
-  if (email && !validateEmail(email)) {
-    throw new AppError(ERROR_MESSAGES.INVALID_EMAIL, 400);
-  }
+  if (email && !validateEmail(email)) throw new AppError(ERROR_MESSAGES.INVALID_EMAIL, 400);
 
   // Validate passwords match
-  if (password !== confirmPassword) {
-    throw new AppError(ERROR_MESSAGES.PASSWORDS_MISMATCH, 400);
-  }
+  if (confirmPassword && password !== confirmPassword) throw new AppError(ERROR_MESSAGES.PASSWORDS_MISMATCH, 400);
 
   // Check if username exists
   const existingUser = await User.findByUsername(username);
@@ -52,7 +47,7 @@ const registerUser = async (userData) => {
   const emailValue = email && email.trim() ? email.trim() : null;
 
   // Create user
-  const user = await User.create(username, emailValue, password, firstName, lastName, phone, specialization, clinicName);
+  const user = await User.create(username, emailValue, password, firstName, lastName, phone, specialization, clinicName, role);
   const token = generateToken(user.id);
 
   return { user, token };
