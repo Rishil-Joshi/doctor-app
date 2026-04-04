@@ -18,13 +18,37 @@ const getPatients = async (doctorId) => {
  * @returns {object} patient
  */
 const createPatient = async (doctorId, patientData) => {
-  const { name, email, phone, age, gender, details, medicalHistory } = patientData;
+  const {
+    name, email, phone, age, gender, details, medicalHistory,
+    address, dateOfAdmission, hospitalName, referredBy,
+    paymentType, cashAmount, onExamination, briefHistory,
+    diagnosis, surgery, operationNotes, aoClassification,
+  } = patientData;
 
-  if (!name || !email || !phone) {
-    throw new AppError('Patient name, email, and phone are required', 400);
+  if (!name) {
+    throw new AppError('Patient name is required', 400);
   }
 
-  const patient = await User.createPatient(doctorId, name, email, phone, age, gender, details, medicalHistory);
+  const { pool } = require('../config/database');
+  const hashedPassword = null;
+  const result = await pool.query(
+    `INSERT INTO patients (
+      doctor_id, name, email, phone, age, gender, details, medical_history,
+      address, date_of_admission, hospital_name, referred_by,
+      payment_type, cash_amount, on_examination, brief_history,
+      diagnosis, surgery, operation_notes, ao_classification
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+    RETURNING id`,
+    [
+      doctorId, name, email || null, phone || null, age || null, gender || null,
+      details || null, medicalHistory || null,
+      address || null, dateOfAdmission || null, hospitalName || null, referredBy || null,
+      paymentType || null, cashAmount || null, onExamination || null, briefHistory || null,
+      diagnosis || null, surgery || null, operationNotes || null, aoClassification || null,
+    ]
+  );
+
+  const patient = await User.getPatientById(result.rows[0].id);
   return patient;
 };
 
