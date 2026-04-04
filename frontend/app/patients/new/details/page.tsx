@@ -71,10 +71,11 @@ export default function PatientDetailsPage() {
   });
   const [imageType, setImageType] = useState('xray');
   const [imagePhase, setImagePhase] = useState('preoperative');
-  const [images, setImages] = useState<File[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [selectedBone, setSelectedBone] = useState<string>('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ file: string; pct: number } | null>(null);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }));
@@ -83,7 +84,7 @@ export default function PatientDetailsPage() {
     setForm(prev => ({ ...prev, [field]: prev[field as keyof typeof prev] ? prev[field as keyof typeof prev] + ' ' + text : text }));
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) setImages(prev => [...prev, ...Array.from(e.target.files!)]);
+    if (e.target.files) setMediaFiles((prev: File[]) => [...prev, ...Array.from(e.target.files!)]);
   };
 
   const handleBoneClick = (boneId: string) => {
@@ -98,7 +99,7 @@ export default function PatientDetailsPage() {
     setError('');
     setSubmitting(true);
     try {
-      await patientAPI.create(auth.token, {
+      const result = await patientAPI.create(auth.token, {
         name: form.name,
         age: form.age ? parseInt(form.age) : undefined,
         gender: form.gender,
@@ -118,11 +119,33 @@ export default function PatientDetailsPage() {
         details: form.diagnosis,
         medicalHistory: form.briefHistory,
       } as any);
-      router.push('/dashboard');
+
+      const newPatientId = result.patient.id;
+
+      // Upload media files one by one with progress
+      for (const file of mediaFiles) {
+        setUploadProgress({ file: file.name, pct: 0 });
+        try {
+          await patientAPI.uploadMedia(
+            auth.token,
+            newPatientId,
+            file,
+            imageType,
+            imagePhase,
+            (pct) => setUploadProgress({ file: file.name, pct })
+          );
+        } catch (uploadErr) {
+          console.error('Media upload failed for', file.name, uploadErr);
+          // Don't block navigation — patient was created successfully
+        }
+      }
+
+      router.push(`/patients/${newPatientId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add patient');
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -166,7 +189,7 @@ export default function PatientDetailsPage() {
                   </select>
                 </div>
                 <div>
-                  <input ref={imageUploadRef} accept="image/*" multiple className="hidden" type="file" onChange={handleImageUpload} />
+                  <input ref={imageUploadRef} accept="image/*,video/*" multiple className="hidden" type="file" onChange={handleImageUpload} />
                   <label htmlFor="upload-clinical">
                     <button type="button" onClick={() => imageUploadRef.current?.click()} className="inline-flex items-center gap-2 border border-slate-200 rounded-md h-9 px-4 text-sm font-medium shadow-sm hover:bg-gray-50 transition">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-1" aria-hidden="true">
@@ -176,14 +199,32 @@ export default function PatientDetailsPage() {
                     </button>
                   </label>
                 </div>
-                <div className="text-sm text-slate-600">Total: <strong>{images.length}</strong> image(s)</div>
+                <div className="text-sm text-slate-600">Total: <strong>{mediaFiles.length}</strong> file(s)</div>
               </div>
-              {images.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-sm">No images uploaded yet. Select type and phase, then upload images.</div>
+              {mediaFiles.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-sm">No files uploaded yet. Select type and phase, then upload images or videos.</div>
               ) : (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {images.map((img, i) => (
-                    <img key={i} src={URL.createObjectURL(img)} alt="" className="w-20 h-20 object-cover rounded-xl border border-pastel-blue/20" />
+                  {mediaFiles.map((file: File, i: number) => (
+                    <div key={i} className="relative w-20 h-20 rounded-xl border border-pastel-blue/20 overflow-hidden bg-pastel-bg flex items-center justify-center">
+                      {file.type.startsWith('video/') ? (
+                        <>
+                          <video src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="1" className="drop-shadow">
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                          </div>
+                        </>
+                      ) : (
+                        <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setMediaFiles((prev: File[]) => prev.filter((_: File, idx: number) => idx !== i))}
+                        className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center text-white text-xs hover:bg-black/70"
+                      >×</button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -352,7 +393,7 @@ export default function PatientDetailsPage() {
               disabled={submitting}
               className="flex-1 bg-pastel-mint-dark hover:opacity-90 text-white h-12 sm:h-14 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-widest shadow transition disabled:opacity-50"
             >
-              {submitting ? 'SAVING...' : 'ADD PATIENT'}
+              {uploadProgress ? `UPLOADING... ${uploadProgress.pct}%` : submitting ? 'SAVING...' : 'ADD PATIENT'}
             </button>
           </div>
         </form>

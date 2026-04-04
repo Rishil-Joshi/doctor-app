@@ -75,6 +75,6 @@ export const useAuth = () => {
     login,
     register,
     logout,
-    isAuthenticated: isAuthenticated(),
+    isAuthenticated: !!token,
   };
 };

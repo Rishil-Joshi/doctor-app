@@ -65,8 +65,8 @@ const getPatientById = async (patientId, doctorId) => {
     throw new AppError(ERROR_MESSAGES.PATIENT_NOT_FOUND, 404);
   }
 
-  // Verify ownership
-  if (patient.doctor_id !== doctorId) {
+  // Verify ownership (parse both to int to avoid type mismatch)
+  if (parseInt(patient.doctor_id) !== parseInt(doctorId)) {
     throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 403);
   }
 
@@ -87,8 +87,7 @@ const updatePatient = async (patientId, doctorId, patientData) => {
     throw new AppError(ERROR_MESSAGES.PATIENT_NOT_FOUND, 404);
   }
 
-  // Verify ownership
-  if (patient.doctor_id !== doctorId) {
+  if (parseInt(patient.doctor_id) !== parseInt(doctorId)) {
     throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 403);
   }
 
@@ -109,8 +108,7 @@ const deletePatient = async (patientId, doctorId) => {
     throw new AppError(ERROR_MESSAGES.PATIENT_NOT_FOUND, 404);
   }
 
-  // Verify ownership
-  if (patient.doctor_id !== doctorId) {
+  if (parseInt(patient.doctor_id) !== parseInt(doctorId)) {
     throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 403);
   }
 

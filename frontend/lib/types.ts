@@ -1,3 +1,15 @@
+export interface PatientMedia {
+  id: number;
+  patient_id: number;
+  url: string;
+  public_id: string;
+  media_type: 'image' | 'video';
+  image_type: string | null;
+  phase: string | null;
+  thumbnail_url: string | null;
+  created_at: string;
+}
+
 export interface Patient {
   id: number;
   name: string;

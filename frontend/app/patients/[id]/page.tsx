@@ -1,20 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { patientAPI } from '@/lib/api/patients';
-import { Patient } from '@/lib/types';
+import { Patient, PatientMedia } from '@/lib/types';
+import { BACKEND_URL } from '@/lib/constants';
+
+const resolveUrl = (url: string) =>
+  url.startsWith('/uploads') ? `${BACKEND_URL}${url}` : url;
 
 export default function PatientDetailPage() {
   const router = useRouter();
   const params = useParams();
   const auth = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [media, setMedia] = useState<PatientMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lightbox, setLightbox] = useState<PatientMedia | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ file: string; pct: number } | null>(null);
+  const addMediaRef = useRef<HTMLInputElement>(null);
 
   const patientId = Number(params.id);
 
@@ -26,19 +35,57 @@ export default function PatientDetailPage() {
 
   useEffect(() => {
     if (!auth.token || !patientId) return;
-    const fetch = async () => {
+    const fetchAll = async () => {
       try {
         setIsLoading(true);
-        const data = await patientAPI.getById(auth.token!, patientId);
-        setPatient(data.patient);
+        const patientData = await patientAPI.getById(auth.token!, patientId);
+        setPatient(patientData.patient);
+        try {
+          const mediaData = await patientAPI.getMedia(auth.token!, patientId);
+          setMedia(mediaData.media || []);
+        } catch {
+          // media fetch failure should not block patient load
+        }
       } catch {
         setError('Failed to load patient');
       } finally {
         setIsLoading(false);
       }
     };
-    fetch();
+    fetchAll();
   }, [auth.token, patientId]);
+
+  const handleAddMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !auth.token) return;
+    const files = Array.from(e.target.files);
+    setUploadingMedia(true);
+    try {
+      for (const file of files) {
+        setUploadProgress({ file: file.name, pct: 0 });
+        const result = await patientAPI.uploadMedia(
+          auth.token, patientId, file, 'clinical', 'postoperative',
+          (pct) => setUploadProgress({ file: file.name, pct })
+        );
+        setMedia((prev) => [...prev, result.media]);
+      }
+    } catch {
+      setError('Failed to upload media');
+    } finally {
+      setUploadingMedia(false);
+      setUploadProgress(null);
+      if (addMediaRef.current) addMediaRef.current.value = '';
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId: number) => {
+    if (!auth.token) return;
+    try {
+      await patientAPI.deleteMedia(auth.token, patientId, mediaId);
+      setMedia((prev) => prev.filter((m) => m.id !== mediaId));
+    } catch {
+      setError('Failed to delete media');
+    }
+  };
 
   const handleDelete = async () => {
     if (!auth.token) return;
@@ -319,19 +366,78 @@ export default function PatientDetailPage() {
           {/* Right: Clinical Info */}
           <div className="lg:col-span-2 space-y-5 sm:space-y-6">
 
-            {/* Clinical Images */}
+            {/* Clinical Media */}
             <div className="bg-white border border-pastel-blue/20 rounded-2xl p-5 sm:p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-widest mb-4 pb-3 border-b border-pastel-blue/10">
-                CLINICAL IMAGES
-              </h3>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                <div className="aspect-square rounded-xl border-2 border-dashed border-pastel-blue/30 bg-pastel-bg flex flex-col items-center justify-center gap-1 text-gray-300 cursor-pointer hover:border-pastel-mint-dark/40 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14" /><path d="M12 5v14" />
-                  </svg>
-                  <span className="text-[8px] uppercase tracking-widest">ADD</span>
-                </div>
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-pastel-blue/10">
+                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-widest">CLINICAL MEDIA</h3>
+                <span className="text-[10px] text-gray-400 uppercase tracking-widest">{media.length} FILE{media.length !== 1 ? 'S' : ''}</span>
               </div>
+
+              {/* Grouped by phase */}
+              {(['preoperative', 'intraoperative', 'postoperative', 'general'] as const).map((phase) => {
+                const phaseMedia = media.filter((m) => m.phase === phase || (!m.phase && phase === 'general'));
+                if (phaseMedia.length === 0) return null;
+                const phaseLabel: Record<string, string> = {
+                  preoperative: 'PRE-OPERATIVE',
+                  intraoperative: 'INTRA-OPERATIVE',
+                  postoperative: 'POST-OPERATIVE',
+                  general: 'GENERAL',
+                };
+                return (
+                  <div key={phase} className="mb-5">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">{phaseLabel[phase]}</p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {phaseMedia.map((item) => (
+                        <div
+                          key={item.id}
+                          className="relative aspect-square rounded-xl overflow-hidden border border-pastel-blue/20 bg-pastel-bg group cursor-pointer"
+                          onClick={() => setLightbox(item)}
+                        >
+                          {item.media_type === 'video' ? (
+                            <>
+                              <img
+                                src={resolveUrl(item.thumbnail_url || item.url)}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                                <div className="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-800 ml-0.5">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <img src={resolveUrl(item.url)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                          )}
+                          {item.image_type && (
+                            <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/50 rounded text-[7px] text-white uppercase tracking-wide">
+                              {item.image_type}
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteMedia(item.id); }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full items-center justify-center text-white text-xs hover:bg-red-500/80 transition-colors hidden group-hover:flex"
+                          >×</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Add more */}
+              <input ref={addMediaRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleAddMedia} />
+              <button
+                onClick={() => addMediaRef.current?.click()}
+                disabled={uploadingMedia}
+                className="mt-2 w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-pastel-blue/30 rounded-xl text-gray-400 hover:border-pastel-mint-dark/40 hover:text-pastel-mint-dark transition-colors text-xs uppercase tracking-widest font-bold disabled:opacity-50"
+              >
+                {uploadProgress
+                  ? `UPLOADING ${uploadProgress.file} — ${uploadProgress.pct}%`
+                  : uploadingMedia ? 'UPLOADING...' : '+ ADD PHOTOS / VIDEOS'}
+              </button>
             </div>
 
             {/* On Examination */}
@@ -389,6 +495,51 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Lightbox / Video Player Modal */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setLightbox(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white text-sm font-bold uppercase tracking-widest"
+            >
+              CLOSE ×
+            </button>
+            {lightbox.media_type === 'video' ? (
+              <video
+                src={resolveUrl(lightbox.url)}
+                controls
+                autoPlay
+                className="w-full max-h-[80vh] rounded-2xl bg-black"
+              />
+            ) : (
+              <img
+                src={resolveUrl(lightbox.url)}
+                alt=""
+                className="w-full max-h-[80vh] object-contain rounded-2xl"
+              />
+            )}
+            {(lightbox.image_type || lightbox.phase) && (
+              <div className="flex gap-2 mt-3 justify-center">
+                {lightbox.image_type && (
+                  <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] text-white uppercase tracking-widest">
+                    {lightbox.image_type}
+                  </span>
+                )}
+                {lightbox.phase && (
+                  <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] text-white uppercase tracking-widest">
+                    {lightbox.phase}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

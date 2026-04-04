@@ -21,9 +21,10 @@ export default function DashboardPage() {
   }, [auth.isLoading, auth.isAuthenticated, router]);
 
   const fetchPatients = useCallback(async () => {
+    if (!auth.token) return;
+    setApiError('');
+    setIsLoadingPatients(true);
     try {
-      if (!auth.token) return;
-      setIsLoadingPatients(true);
       const data = await patientAPI.getAll(auth.token);
       setPatients(data.patients || []);
     } catch (err) {

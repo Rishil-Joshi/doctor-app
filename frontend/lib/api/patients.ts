@@ -1,5 +1,5 @@
 import { API_URL } from '../constants';
-import { Patient } from '../types';
+import { Patient, PatientMedia } from '../types';
 
 export const patientAPI = {
   getAll: async (token: string): Promise<{ patients: Patient[] }> => {
@@ -70,6 +70,60 @@ export const patientAPI = {
       throw new Error('Failed to delete patient');
     }
 
+    return response.json();
+  },
+
+  uploadMedia: async (
+    token: string,
+    patientId: number,
+    file: File,
+    imageType: string,
+    phase: string,
+    onProgress?: (pct: number) => void
+  ): Promise<{ media: PatientMedia }> => {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('imageType', imageType);
+      formData.append('phase', phase);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_URL}/patients/${patientId}/media`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          reject(new Error('Failed to upload media'));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Upload failed'));
+      xhr.send(formData);
+    });
+  },
+
+  getMedia: async (token: string, patientId: number): Promise<{ media: PatientMedia[] }> => {
+    const response = await fetch(`${API_URL}/patients/${patientId}/media`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Failed to fetch media');
+    return response.json();
+  },
+
+  deleteMedia: async (token: string, patientId: number, mediaId: number): Promise<{ message: string }> => {
+    const response = await fetch(`${API_URL}/patients/${patientId}/media/${mediaId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Failed to delete media');
     return response.json();
   },
 };

@@ -1,6 +1,10 @@
 require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
@@ -26,6 +30,11 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Serve local uploads in dev
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
