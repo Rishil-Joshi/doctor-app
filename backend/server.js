@@ -36,6 +36,15 @@ if (process.env.NODE_ENV !== 'production') {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 }
 
+// Request logger
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} → ${res.statusCode} (${Date.now() - start}ms)`);
+  });
+  next();
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
