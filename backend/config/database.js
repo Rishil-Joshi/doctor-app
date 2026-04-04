@@ -1,55 +1,54 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { Pool } = require('pg');
 
-const dbPath = path.join(__dirname, '../doctor_app.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error opening database:', err);
-  } else {
-    console.log('Connected to SQLite database');
-  }
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// Enable foreign keys
-db.run('PRAGMA foreign_keys = ON');
+const initializeDatabase = async () => {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        specialization TEXT,
+        clinic_name TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
-const initializeDatabase = () => {
-  // Create users table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      specialization TEXT,
-      clinic_name TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS patients (
+        id SERIAL PRIMARY KEY,
+        doctor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        age INTEGER,
+        gender TEXT,
+        details TEXT,
+        medical_history TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
-  // Create patients table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS patients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      doctor_id INTEGER NOT NULL,
-      name TEXT NOT NULL,
-      email TEXT,
-      phone TEXT,
-      age INTEGER,
-      gender TEXT,
-      details TEXT,
-      medical_history TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-  `);
+    // Make email nullable if it isn't already (migration for existing DBs)
+    await client.query(`
+      ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+    `).catch(() => {});
 
-  console.log('SQLite database initialized');
+    console.log('PostgreSQL database initialized');
+  } finally {
+    client.release();
+  }
 };
 
-module.exports = { db, initializeDatabase };
+module.exports = { pool, initializeDatabase };

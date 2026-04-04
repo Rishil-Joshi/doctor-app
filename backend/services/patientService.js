@@ -68,7 +68,7 @@ const updatePatient = async (patientId, doctorId, patientData) => {
     throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 403);
   }
 
-  const updatedPatient = await User.updatePatient(patientId, patientData);
+  const updatedPatient = await User.updatePatient(patientId, doctorId, patientData);
   return updatedPatient;
 };
 
@@ -90,7 +90,7 @@ const deletePatient = async (patientId, doctorId) => {
     throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 403);
   }
 
-  await User.deletePatient(patientId);
+  await User.deletePatient(patientId, doctorId);
   return true;
 };
 

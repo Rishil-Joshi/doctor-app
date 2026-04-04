@@ -84,9 +84,6 @@ export default function RegisterPage() {
           <AuthHeader
             title="Create Account"
             subtitle="Join SURGIFLOW to manage your patients"
-            switchText="Already have an account?"
-            switchLink="/login"
-            switchLinkText="Login here"
           />
 
         <form onSubmit={handleRegister} className="space-y-4">
@@ -118,11 +115,11 @@ export default function RegisterPage() {
           />
 
           <FormField
-            label="Email *"
+            label="Email"
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="Enter your email"
+            placeholder="Enter your email (optional)"
             error={validationErrors.email}
           />
 
@@ -130,8 +127,11 @@ export default function RegisterPage() {
             label="Phone Number *"
             type="tel"
             value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            placeholder="e.g., (555) 123-4567"
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormData({ ...formData, phone: digits });
+            }}
+            placeholder="10-digit number"
             error={validationErrors.phone}
           />
 
@@ -142,7 +142,7 @@ export default function RegisterPage() {
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             placeholder="Create a strong password"
             error={validationErrors.password}
-            helperText={!validationErrors.password ? 'Min 8 chars, 1 uppercase, 1 number' : undefined}
+            helperText={!validationErrors.password ? 'Minimum 5 characters' : undefined}
           />
 
           <FormField
@@ -184,6 +184,13 @@ export default function RegisterPage() {
             {auth.isLoading ? 'Creating account...' : 'REGISTER'}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-xs uppercase tracking-[0.28em] text-slate-500">
+          Already have an account?{' '}
+          <a href="/login" className="text-teal-500 underline font-semibold ml-1">
+            Login here
+          </a>
+        </p>
       </div>
     </div>
   </main>
