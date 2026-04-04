@@ -5,6 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { patientAPI } from '@/lib/api/patients';
 import { Patient, PatientMedia } from '@/lib/types';
+import { BACKEND_URL } from '@/lib/constants';
+
+const resolveUrl = (url: string) =>
+  url.startsWith('/uploads') ? `${BACKEND_URL}${url}` : url;
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -34,12 +38,14 @@ export default function PatientDetailPage() {
     const fetchAll = async () => {
       try {
         setIsLoading(true);
-        const [patientData, mediaData] = await Promise.all([
-          patientAPI.getById(auth.token!, patientId),
-          patientAPI.getMedia(auth.token!, patientId),
-        ]);
+        const patientData = await patientAPI.getById(auth.token!, patientId);
         setPatient(patientData.patient);
-        setMedia(mediaData.media || []);
+        try {
+          const mediaData = await patientAPI.getMedia(auth.token!, patientId);
+          setMedia(mediaData.media || []);
+        } catch {
+          // media fetch failure should not block patient load
+        }
       } catch {
         setError('Failed to load patient');
       } finally {
@@ -390,7 +396,7 @@ export default function PatientDetailPage() {
                           {item.media_type === 'video' ? (
                             <>
                               <img
-                                src={item.thumbnail_url || item.url}
+                                src={resolveUrl(item.thumbnail_url || item.url)}
                                 alt=""
                                 className="w-full h-full object-cover"
                               />
@@ -403,7 +409,7 @@ export default function PatientDetailPage() {
                               </div>
                             </>
                           ) : (
-                            <img src={item.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                            <img src={resolveUrl(item.url)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                           )}
                           {item.image_type && (
                             <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/50 rounded text-[7px] text-white uppercase tracking-wide">
@@ -505,14 +511,14 @@ export default function PatientDetailPage() {
             </button>
             {lightbox.media_type === 'video' ? (
               <video
-                src={lightbox.url}
+                src={resolveUrl(lightbox.url)}
                 controls
                 autoPlay
                 className="w-full max-h-[80vh] rounded-2xl bg-black"
               />
             ) : (
               <img
-                src={lightbox.url}
+                src={resolveUrl(lightbox.url)}
                 alt=""
                 className="w-full max-h-[80vh] object-contain rounded-2xl"
               />

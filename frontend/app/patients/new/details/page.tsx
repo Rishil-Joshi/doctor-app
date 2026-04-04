@@ -125,14 +125,19 @@ export default function PatientDetailsPage() {
       // Upload media files one by one with progress
       for (const file of mediaFiles) {
         setUploadProgress({ file: file.name, pct: 0 });
-        await patientAPI.uploadMedia(
-          auth.token,
-          newPatientId,
-          file,
-          imageType,
-          imagePhase,
-          (pct) => setUploadProgress({ file: file.name, pct })
-        );
+        try {
+          await patientAPI.uploadMedia(
+            auth.token,
+            newPatientId,
+            file,
+            imageType,
+            imagePhase,
+            (pct) => setUploadProgress({ file: file.name, pct })
+          );
+        } catch (uploadErr) {
+          console.error('Media upload failed for', file.name, uploadErr);
+          // Don't block navigation — patient was created successfully
+        }
       }
 
       router.push(`/patients/${newPatientId}`);
