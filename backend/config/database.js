@@ -53,6 +53,20 @@ const initializeDatabase = async () => {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS patient_media (
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        public_id TEXT NOT NULL,
+        media_type TEXT NOT NULL DEFAULT 'image',
+        image_type TEXT,
+        phase TEXT,
+        thumbnail_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Migrations for existing DBs
     await client.query(`ALTER TABLE users ALTER COLUMN email DROP NOT NULL;`).catch(() => {});
     await client.query(`ALTER TABLE users ALTER COLUMN first_name DROP NOT NULL;`).catch(() => {});
