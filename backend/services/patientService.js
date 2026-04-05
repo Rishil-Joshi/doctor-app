@@ -1,5 +1,6 @@
 const { User } = require('../models/User');
 const { AppError, ERROR_MESSAGES } = require('../utils/errors');
+const { getPatientMedia, deleteMedia } = require('./mediaService');
 
 /**
  * Get all patients for a doctor
@@ -111,6 +112,12 @@ const deletePatient = async (patientId, doctorId) => {
   if (parseInt(patient.doctor_id) !== parseInt(doctorId)) {
     throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 403);
   }
+
+  // Delete all media files from Cloudinary / local storage before removing the patient
+  const mediaFiles = await getPatientMedia(patientId);
+  await Promise.allSettled(
+    mediaFiles.map((media) => deleteMedia(media.id, patientId))
+  );
 
   await User.deletePatient(patientId, doctorId);
   return true;
