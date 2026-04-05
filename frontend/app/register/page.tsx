@@ -39,12 +39,7 @@ export default function RegisterPage() {
       await auth.register({
         username: formData.username,
         password: formData.password,
-        confirmPassword: formData.password,
         role: formData.role,
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
       });
       router.push('/dashboard');
     } catch (err) {

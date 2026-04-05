@@ -110,7 +110,7 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
         {/* Add New Patient Button */}
         <button
-          onClick={() => router.push('/patients/new')}
+          onClick={() => router.push('/patients/new/details')}
           className="w-full mb-6 sm:mb-10 flex items-center justify-center gap-3 sm:gap-5 bg-pastel-mint-dark text-white py-5 sm:py-7 rounded-2xl font-bold text-base sm:text-lg hover:opacity-90 transition-all shadow-sm active:scale-[0.99] uppercase tracking-wider"
         >
           <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-xl flex items-center justify-center">
