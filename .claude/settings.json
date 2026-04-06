@@ -1,7 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(ls /Users/2226135/Desktop/ACI_Workspac/doctor-app/frontend/app/patients/[id]/)",
+      "Bash(npm test:*)",
+      "Bash(convert --version)",
+      "Bash(node -e \"const {createCanvas} = require\\('canvas'\\); console.log\\('canvas ok'\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(python3 -c \"import PIL; print\\('Pillow available'\\)\")",
+      "Bash(python3 -c \"import cairosvg; print\\('cairosvg available'\\)\")",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp ok'\\)\")",
+      "Bash(node -e \"require\\('canvas'\\); console.log\\('canvas ok'\\)\")",
+      "Bash(node -e ':*)"
     ]
   }
 }

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { patientAPI } from '@/lib/api/patients';
 import { Patient, PatientMedia } from '@/lib/types';
 import { BACKEND_URL } from '@/lib/constants';
+import { IMAGE_TYPE_OPTIONS, IMAGE_PHASE_OPTIONS } from '@/lib/constants/patientForm';
 
 const resolveUrl = (url: string) =>
   url.startsWith('/uploads') ? `${BACKEND_URL}${url}` : url;
@@ -23,6 +24,8 @@ export default function PatientDetailPage() {
   const [lightbox, setLightbox] = useState<PatientMedia | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ file: string; pct: number } | null>(null);
+  const [addMediaType, setAddMediaType] = useState('xray');
+  const [addMediaPhase, setAddMediaPhase] = useState('preoperative');
   const addMediaRef = useRef<HTMLInputElement>(null);
 
   const patientId = Number(params.id);
@@ -63,7 +66,7 @@ export default function PatientDetailPage() {
       for (const file of files) {
         setUploadProgress({ file: file.name, pct: 0 });
         const result = await patientAPI.uploadMedia(
-          auth.token, patientId, file, 'clinical', 'postoperative',
+          auth.token, patientId, file, addMediaType, addMediaPhase,
           (pct) => setUploadProgress({ file: file.name, pct })
         );
         setMedia((prev) => [...prev, result.media]);
@@ -429,15 +432,45 @@ export default function PatientDetailPage() {
 
               {/* Add more */}
               <input ref={addMediaRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleAddMedia} />
-              <button
-                onClick={() => addMediaRef.current?.click()}
-                disabled={uploadingMedia}
-                className="mt-2 w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-pastel-blue/30 rounded-xl text-gray-400 hover:border-pastel-mint-dark/40 hover:text-pastel-mint-dark transition-colors text-xs uppercase tracking-widest font-bold disabled:opacity-50"
-              >
-                {uploadProgress
-                  ? `UPLOADING ${uploadProgress.file} — ${uploadProgress.pct}%`
-                  : uploadingMedia ? 'UPLOADING...' : '+ ADD PHOTOS / VIDEOS'}
-              </button>
+              <div className="mt-4 pt-4 border-t border-pastel-blue/10 space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">TYPE</label>
+                    <select
+                      value={addMediaType}
+                      onChange={(e) => setAddMediaType(e.target.value)}
+                      disabled={uploadingMedia}
+                      className="mt-1 w-full h-9 rounded-lg border border-pastel-blue/30 bg-white px-3 text-xs focus:outline-none focus:ring-1 focus:ring-pastel-mint-dark disabled:opacity-50"
+                    >
+                      {IMAGE_TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">PHASE</label>
+                    <select
+                      value={addMediaPhase}
+                      onChange={(e) => setAddMediaPhase(e.target.value)}
+                      disabled={uploadingMedia}
+                      className="mt-1 w-full h-9 rounded-lg border border-pastel-blue/30 bg-white px-3 text-xs focus:outline-none focus:ring-1 focus:ring-pastel-mint-dark disabled:opacity-50"
+                    >
+                      {IMAGE_PHASE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={() => addMediaRef.current?.click()}
+                  disabled={uploadingMedia}
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-pastel-blue/30 rounded-xl text-gray-400 hover:border-pastel-mint-dark/40 hover:text-pastel-mint-dark transition-colors text-xs uppercase tracking-widest font-bold disabled:opacity-50"
+                >
+                  {uploadProgress
+                    ? `UPLOADING ${uploadProgress.file} — ${uploadProgress.pct}%`
+                    : uploadingMedia ? 'UPLOADING...' : '+ ADD PHOTOS / VIDEOS'}
+                </button>
+              </div>
             </div>
 
             {/* On Examination */}
