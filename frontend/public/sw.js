@@ -6,6 +6,9 @@ self.addEventListener('install', (event) => {
       return cache.addAll([
         '/',
         '/manifest.json',
+        '/icon-192x192.png',
+        '/icon-512x512.png',
+        '/apple-touch-icon.png',
       ]);
     })
   );
